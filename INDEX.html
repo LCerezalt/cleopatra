@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Cleopatra — Caja (Google Sheets)</title>
+<style>
+  :root{
+    --ink:#0f2b2e;
+    --paper:#f4f7f6;
+    --card:#ffffff;
+    --teal:#0e6b63;
+    --teal-dark:#0a4d47;
+    --coral:#e2572b;
+    --line:#dde5e3;
+    --muted:#5c7370;
+  }
+  :root:not([data-theme="light"]){
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#eaf2f0;
+      --paper:#0b1716;
+      --card:#132422;
+      --teal:#3fbfae;
+      --teal-dark:#78e0cf;
+      --coral:#ff7a48;
+      --line:#1f3634;
+      --muted:#8fa8a4;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#eaf2f0;
+    --paper:#0b1716;
+    --card:#132422;
+    --teal:#3fbfae;
+    --teal-dark:#78e0cf;
+    --coral:#ff7a48;
+    --line:#1f3634;
+    --muted:#8fa8a4;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Fjalla One', 'Arial Narrow', Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{font-family:'Roboto Condensed', Arial, sans-serif;font-weight:700;}
+  .body-text{font-family:'Roboto Condensed', Arial, sans-serif;font-weight:400;}
+
+  header{
+    position:sticky;top:0;z-index:20;
+    background:var(--teal-dark);
+    color:#fff;
+    padding:14px 16px 12px;
+  }
+  .brand-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .brand{
+    font-size:22px;letter-spacing:.02em;
+    display:flex;align-items:center;gap:8px;
+  }
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--coral);display:inline-block;}
+  .subtitle{font-family:'Roboto Condensed',sans-serif;font-size:12px;color:#cfe7e2;margin-top:2px;}
+
+  .cat-scroll{
+    display:flex;gap:8px;overflow-x:auto;margin-top:12px;
+    padding-bottom:2px;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .cat-scroll::-webkit-scrollbar{display:none;}
+  .cat-btn{
+    flex:0 0 auto;
+    font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:13px;
+    padding:9px 16px;border-radius:100px;border:1.5px solid rgba(255,255,255,.35);
+    background:transparent;color:#fff;white-space:nowrap;
+  }
+  .cat-btn.active{background:var(--coral);border-color:var(--coral);}
+
+  main{padding:14px 12px 140px;max-width:640px;margin:0 auto;}
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:10px;
+  }
+  @media(min-width:520px){
+    .grid{grid-template-columns:repeat(3, 1fr);}
+  }
+
+  .pcard{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 10px 10px;
+    text-align:left;
+    display:flex;flex-direction:column;
+    min-height:118px;
+    position:relative;
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .08s ease;
+  }
+  .pcard:active{transform:scale(.96);background:color-mix(in srgb, var(--teal) 10%, var(--card));}
+
+  .pcard .sku{
+    font-family:'Roboto Condensed',sans-serif;font-size:10.5px;color:var(--muted);
+    letter-spacing:.03em;
+  }
+  .pcard .pname{
+    font-size:16px;line-height:1.15;margin:4px 0 auto;
+    flex-grow:1;
+  }
+  .pcard .um{
+    font-family:'Roboto Condensed',sans-serif;font-size:11px;color:var(--muted);
+    margin-top:6px;
+  }
+  .pcard .price{
+    margin-top:6px;
+    font-size:19px;color:var(--teal-dark);
+    display:flex;align-items:baseline;justify-content:space-between;
+  }
+  .pcard .plus{
+    width:26px;height:26px;border-radius:7px;background:var(--coral);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;
+    flex:0 0 auto;
+  }
+  .pcard .qty-badge{
+    position:absolute;top:-7px;right:-7px;
+    background:var(--teal);color:#fff;
+    width:24px;height:24px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:12px;
+    box-shadow:0 2px 4px rgba(0,0,0,.25);
+  }
+
+  .empty{
+    grid-column:1/-1;text-align:center;color:var(--muted);
+    font-family:'Roboto Condensed',sans-serif;padding:40px 10px;
+  }
+
+  /* Bottom bar */
+  .bar{
+    position:fixed;bottom:0;left:0;right:0;z-index:30;
+    background:var(--teal-dark);color:#fff;
+    padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+    display:flex;align-items:center;gap:12px;
+    box-shadow:0 -4px 14px rgba(0,0,0,.2);
+  }
+  .bar .info{flex-grow:1;}
+  .bar .lbl{font-family:'Roboto Condensed',sans-serif;font-size:11px;color:#cfe7e2;}
+  .bar .tot{font-size:26px;}
+  .bar button{
+    font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:14px;
+    border:none;border-radius:9px;padding:13px 18px;
+  }
+  .btn-cart{background:rgba(255,255,255,.14);color:#fff;}
+  .btn-close{background:var(--coral);color:#fff;}
+  .btn-close:disabled{opacity:.4;}
+
+  /* Cart drawer */
+  .overlay{
+    position:fixed;inset:0;background:rgba(6,20,18,.55);z-index:40;
+    display:none;
+  }
+  .overlay.open{display:block;}
+  .drawer{
+    position:fixed;left:0;right:0;bottom:0;z-index:50;
+    background:var(--paper);
+    border-radius:16px 16px 0 0;
+    max-height:82vh;
+    transform:translateY(100%);
+    transition:transform .22s ease;
+    display:flex;flex-direction:column;
+  }
+  .drawer.open{transform:translateY(0);}
+  .drawer-head{
+    padding:16px 16px 10px;display:flex;justify-content:space-between;align-items:center;
+    border-bottom:1px solid var(--line);
+  }
+  .drawer-head h2{margin:0;font-size:19px;font-weight:400;}
+  .drawer-head .x{
+    background:none;border:none;color:var(--muted);font-size:22px;line-height:1;padding:4px 8px;
+  }
+  .drawer-body{overflow-y:auto;padding:8px 16px 16px;}
+  .cart-row{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 0;border-bottom:1px solid var(--line);
+  }
+  .cart-row .cname{flex-grow:1;}
+  .cart-row .cname .n{font-size:15px;}
+  .cart-row .cname .p{font-family:'Roboto Condensed',sans-serif;font-size:12px;color:var(--muted);}
+  .stepper{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .stepper button{
+    width:30px;height:30px;background:var(--card);border:none;color:var(--teal-dark);
+    font-size:16px;font-family:'Roboto Condensed',sans-serif;font-weight:700;
+  }
+  .stepper .q{width:28px;text-align:center;font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:14px;}
+  .line-total{width:64px;text-align:right;font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:14px;}
+  .empty-cart{text-align:center;color:var(--muted);font-family:'Roboto Condensed',sans-serif;padding:30px 0;}
+
+  .toast{
+    position:fixed;left:50%;bottom:96px;transform:translate(-50%,10px);
+    background:var(--ink);color:var(--paper);
+    font-family:'Roboto Condensed',sans-serif;font-size:13px;
+    padding:9px 16px;border-radius:100px;
+    opacity:0;pointer-events:none;transition:all .18s ease;z-index:60;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+
+  .receipt{
+    background:var(--card);border:1px dashed var(--line);border-radius:10px;
+    padding:14px;margin-top:8px;font-family:'Roboto Condensed',sans-serif;font-size:13px;
+  }
+  .receipt div{display:flex;justify-content:space-between;padding:3px 0;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-row">
+    <div class="brand"><span class="dot"></span>Cleopatra</div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button id="openHistory" class="body-text" style="background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:100px;padding:6px 12px;font-size:12px;">Historial</button>
+      <button id="openCatalog" class="body-text" style="background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:100px;padding:6px 12px;font-size:12px;">Productos</button>
+      <button id="openConfig" class="body-text" style="background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:100px;padding:6px 10px;font-size:12px;">⚙️</button>
+      <div class="num" id="clock" style="font-size:13px;color:#cfe7e2;"></div>
+    </div>
+  </div>
+  <div class="subtitle" id="syncStatus">Toca un producto para agregarlo a la venta</div>
+  <div class="cat-scroll" id="catScroll"></div>
+</header>
+
+<main>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="bar">
+  <div class="info">
+    <div class="lbl">TOTAL</div>
+    <div class="tot num" id="barTotal">$0</div>
+  </div>
+  <button class="btn-cart body-text" id="openCart">Carro (<span id="cartCount">0</span>)</button>
+  <button class="btn-close body-text" id="closeSale" disabled>Cerrar venta</button>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h2>Venta actual</h2>
+    <button class="x" id="closeDrawer">×</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="catOverlay"></div>
+<div class="drawer" id="catDrawer">
+  <div class="drawer-head">
+    <h2>Gestionar productos</h2>
+    <button class="x" id="closeCatDrawer">×</button>
+  </div>
+  <div class="drawer-body" style="padding-bottom:20px;">
+    <form id="prodForm" style="display:flex;flex-direction:column;gap:10px;padding:6px 0 16px;border-bottom:1px solid var(--line);">
+      <input type="hidden" id="editingSku" value="">
+      <label class="body-text" style="font-size:12px;color:var(--muted);">
+        Nombre del producto
+        <input required id="fName" type="text" placeholder="Ej: Costillar de cerdo"
+          style="width:100%;margin-top:4px;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;">
+      </label>
+      <div style="display:flex;gap:10px;">
+        <label class="body-text" style="font-size:12px;color:var(--muted);flex:1;">
+          SKU
+          <input required id="fSku" type="text" placeholder="Ej: 3159010001"
+            style="width:100%;margin-top:4px;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;">
+        </label>
+        <label class="body-text" style="font-size:12px;color:var(--muted);width:80px;">
+          UM
+          <select id="fUm" style="width:100%;margin-top:4px;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;">
+            <option value="Un">Un</option>
+            <option value="Kg">Kg</option>
+          </select>
+        </label>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <label class="body-text" style="font-size:12px;color:var(--muted);flex:1;">
+          Precio
+          <input required id="fPrice" type="number" min="0" step="1" placeholder="Ej: 8990"
+            style="width:100%;margin-top:4px;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;">
+        </label>
+        <label class="body-text" style="font-size:12px;color:var(--muted);flex:1;">
+          Categoría
+          <input list="catOptions" id="fCat" type="text" placeholder="Ej: Carnes"
+            style="width:100%;margin-top:4px;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;">
+          <datalist id="catOptions"></datalist>
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" class="body-text" style="flex:1;background:var(--teal);color:#fff;border:none;border-radius:9px;padding:12px;font-weight:700;font-size:14px;font-family:'Roboto Condensed',sans-serif;">Guardar producto</button>
+        <button type="button" id="cancelEdit" class="body-text" style="display:none;background:var(--line);color:var(--ink);border:none;border-radius:9px;padding:12px 16px;font-size:14px;font-family:'Roboto Condensed',sans-serif;">Cancelar</button>
+      </div>
+    </form>
+    <div id="customList" style="padding-top:6px;"></div>
+  </div>
+</div>
+
+<div class="overlay" id="histOverlay"></div>
+<div class="drawer" id="histDrawer">
+  <div class="drawer-head">
+    <h2>Historial de ventas</h2>
+    <button class="x" id="closeHistDrawer">×</button>
+  </div>
+  <div class="drawer-body" id="histBody" style="padding-bottom:90px;">
+    <div class="empty-cart">Cargando…</div>
+  </div>
+  <div style="position:sticky;bottom:0;background:var(--paper);padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);">
+    <button id="downloadCsv" class="body-text" style="width:100%;background:var(--coral);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:14px;font-family:'Roboto Condensed',sans-serif;">Descargar historial (CSV)</button>
+  </div>
+</div>
+
+<script>
+// ---------- Datos de productos (del catálogo Cleopatra) ----------
+const RAW = `3029010001|Pechuga con hueso|Kg|4490
+3029010002|Trutro corto|Kg|3490
+3029010003|Trutro entero|Kg|3990
+3029090001|Asiento V.|Kg|13990
+3029090002|Filete V.|Kg|19990
+3029090003|Lomo Liso V.|Kg|14990
+3029090004|Plateada V.|Kg|10490
+3029090005|Pollo Ganso V.|Kg|11490
+3029090006|Punta Picana V.|Kg|11990
+3029100001|C. Abastero|Kg|11990
+3029100002|C. Carnicero|Kg|11990
+3029150001|Hamburguesa Vacuno|Un|990
+3079200001|Camarón ecu. crudo c/piel 1kg|Un|14990
+3079200002|Camarón crudo pelado desv 1kg|Un|9990
+3079200003|Camarón crudo pelado 500g|Un|8990
+3079200004|Camarón cocido pelado 500g|Un|8990
+3079200005|Surtido de mariscos 1kg|Un|6490
+3079200006|Ostión s/coral 1 kg|Un|14990
+3079200007|Ostión con concha 1 kg|Un|24990
+3089030001|Masa Empanada 22cm|Un|7490
+3089190001|Masa Pre-pizza|Un|3990
+3089190002|Masa Emp. 15cm|Un|6990
+3089190003|Masa Emp. 18cm|Un|7490
+3099200001|Salmón 500g|Un|6990
+3099200002|Salmón 200g|Un|3490
+3099200003|Filete merluza 1kg|Un|5490
+3099200004|Filete merluza 700g|Un|4990
+3099200005|Filete tilapia 1 kg|Un|4990
+3099200006|Filete tilapia granel|Kg|4990
+3099200007|Atún steak porción 200g|Un|3490
+3099200008|Filete merluza c/p 1kg|Un|5490
+3109150001|Primavera mix 500g|Un|1490
+3109150002|Papas duquesas|Un|1990
+3109150003|Papas pre-fritas finas|Un|2990
+3109150004|Papas tradicionales|Un|1990
+3109150005|Papas pre-fritas|Un|1990
+3109200001|Filete pescado apanado 500g|Un|4990
+3109200002|Barritas de mozzarella 500g|Un|4990
+3119030001|Caja Pizzetas|Un|5490
+3119030002|Pan de Prepizza 15cm|Un|3990
+3119030003|Dobladitas|Un|4490
+3119030004|Hallullitas|Un|3990
+3119030005|Empanada de queso m/luna|Un|3490
+3119030006|Emp. Raviolera|Un|7490
+3119030007|Hamburguesa receta del abuelo|Un|990
+3119030008|Hamburguesa La crianza|Un|990
+3119140001|Emp. champiñón queso tradicional|Un|9490
+3119140002|Emp. pino tradicional|Un|9990
+3119150001|Pizza Pepperoni|Un|3990
+3119150002|Pizza Jamón queso|Un|3990
+3119190001|Sopaipilla cóctel 50 un.|Un|6490
+3119190002|Sopaipillas 12cm|Un|4490
+3119190003|Calzones rotos 12 un|Un|4490
+3119190004|Emp. Camarón queso triangular|Un|5990
+3119190005|Emp. Pollo cebollín triangular|Un|5990
+3119190006|Emp. cóctel|Un|5490
+3119190007|Emp. cóctel Napolitana|Un|5490
+3119190008|Emp. cóctel Pollo queso|Un|5490
+3119190009|Emp. cóctel Choclo queso|Un|5490
+3119190010|Emp. cóctel Aceituna queso|Un|5490
+3119190011|Emp. cóctel Champiñón queso|Un|5490
+3119190012|Emp. cóctel Ciboulette queso|Un|5490
+3119190013|Emp. cóctel Jamón queso|Un|5490
+3119190014|Emp. cóctel Espinaca queso|Un|5490
+3119190015|Arrollado primavera|Un|5990
+3119190016|Arrollado Jamón queso|Un|5990
+3119190017|Pizzeta napolitana|Un|6990
+3119190018|Pizzetas|Un|2990
+3119200001|Gyoza Cerdo 30 un|Un|5990
+3119200002|Gyoza Pollo 30 un|Un|5990
+3119200003|Arrollado Primavera|Un|3990
+3119200004|Emp. Camarón Mandarín|Un|9990
+3139150001|Sofrito 500g|Un|2490
+3139150002|Sofrito 200g|Un|690
+3139150003|Choclo 200g|Un|790
+3139150004|Primavera mix 200g|Un|990
+3139150005|Arveja 1kg|Un|2490
+3149220001|Jugo Dr. Fruit Piña|Un|1490
+3149220002|Jugo Dr. Fruit Mango|Un|1490
+3149220003|Jugo Dr. Fruit Sandía|Un|1490
+3149220004|Jugo Dr. Fruit Frutilla|Un|1490
+3149220005|Jugo Dr. Fruit Maracuyá|Un|1490
+3149220006|Jugo Dr. Fruit Aguacoco s/az|Un|1490
+3149220007|Suerox Arándano Pomelo|Un|1990
+3149220008|Suerox Frutilla-Kiwi|Un|1990
+3149220009|Suerox Naranja|Un|1990
+3149220010|Suerox Piña|Un|1990
+3149220011|Suerox Frutos rojos|Un|1990
+3149220012|Suerox Polvo mixto|Un|1990
+3149220013|Suerox Limón de pica|Un|1990
+3149220014|Suerox Manzana|Un|1990
+3149220015|Suerox Mango Durazno|Un|1990
+3149220016|Suerox polvo Arándano Pomelo|Un|1990
+3149220017|Suerox polvo Frutos Rojos|Un|1990
+3149220018|Suerox polvo Naranja|Un|1990
+3149220019|Suerox polvo Piña|Un|1990
+3149220020|Aloe Vera OKF|Un|1490
+3149220021|Ice Tea Durazno|Un|1490
+3149220022|Ice Tea Limón|Un|1490
+3149220023|Guaraná Zero|Un|1490
+3149220024|Guaraná Original|Un|1490
+3149800001|Mote c/ huesillo al vacío|Un|3990`;
+
+function categoryFor(sku, name){
+  const p = sku.slice(0,4);
+  if(p === '3029') return 'Carnes';
+  if(p === '3079' || p === '3099') return 'Mariscos y pescados';
+  if(p === '3089' || p === '3119') return 'Masas y empanadas';
+  if(p === '3109' || p === '3139') return 'Congelados y verduras';
+  if(p === '3149') return name.toLowerCase().includes('mote') ? 'Otros' : 'Bebidas';
+  return 'Otros';
+}
+
+const BASE_PRODUCTS = RAW.trim().split('\n').map(line=>{
+  const [sku,name,um,price] = line.split('|');
+  return {sku,name,um,price:parseInt(price,10),cat:categoryFor(sku,name)};
+});
+
+let customProducts = []; // productos agregados por la usuaria
+function allProducts(){ return BASE_PRODUCTS.concat(customProducts); }
+function currentCats(){ return ['Todos', ...Array.from(new Set(allProducts().map(p=>p.cat)))]; }
+
+// ---------- Estado ----------
+let activeCat = 'Todos';
+let cart = {}; // sku -> qty
+
+const fmt = n => '$' + n.toLocaleString('es-CL');
+
+// ---------- Render categorías ----------
+const catScroll = document.getElementById('catScroll');
+function renderCatScroll(){
+  const cats = currentCats();
+  if(!cats.includes(activeCat)) activeCat = 'Todos';
+  catScroll.innerHTML = '';
+  cats.forEach(c=>{
+    const b = document.createElement('button');
+    b.className = 'cat-btn' + (c===activeCat ? ' active':'');
+    b.textContent = c;
+    b.onclick = ()=>{ activeCat=c; renderCatScroll(); renderGrid(); };
+    b.dataset.cat = c;
+    catScroll.appendChild(b);
+  });
+}
+function renderCats(){ renderCatScroll(); }
+
+// ---------- Render grid ----------
+const grid = document.getElementById('grid');
+function renderGrid(){
+  grid.innerHTML = '';
+  const list = allProducts().filter(p => activeCat==='Todos' || p.cat===activeCat);
+  if(list.length===0){
+    grid.innerHTML = '<div class="empty">Sin productos en esta categoría.</div>';
+    return;
+  }
+  list.forEach(p=>{
+    const card = document.createElement('button');
+    card.className = 'pcard';
+    card.innerHTML = `
+      <span class="sku">${p.sku}</span>
+      <span class="pname">${p.name}</span>
+      <span class="um">${p.um}</span>
+      <span class="price"><span>${fmt(p.price)}</span><span class="plus">+</span></span>
+      ${cart[p.sku] ? `<span class="qty-badge">${cart[p.sku]}</span>` : ''}
+    `;
+    card.onclick = ()=> addToCart(p);
+    grid.appendChild(card);
+  });
+}
+
+function addToCart(p){
+  cart[p.sku] = (cart[p.sku]||0) + 1;
+  renderGrid();
+  renderBar();
+  showToast(p.name + ' agregado');
+}
+function setQty(sku, qty){
+  if(qty<=0){ delete cart[sku]; } else { cart[sku]=qty; }
+  renderGrid(); renderBar(); renderDrawer();
+}
+
+// ---------- Barra inferior ----------
+function cartTotal(){
+  return Object.entries(cart).reduce((sum,[sku,qty])=>{
+    const p = allProducts().find(x=>x.sku===sku);
+    return sum + (p ? p.price*qty : 0);
+  },0);
+}
+function cartCount(){
+  return Object.values(cart).reduce((a,b)=>a+b,0);
+}
+function renderBar(){
+  document.getElementById('barTotal').textContent = fmt(cartTotal());
+  document.getElementById('cartCount').textContent = cartCount();
+  document.getElementById('closeSale').disabled = cartCount()===0;
+}
+
+// ---------- Drawer del carro ----------
+const drawer = document.getElementById('drawer');
+const overlay = document.getElementById('overlay');
+function openDrawer(){ renderDrawer(); drawer.classList.add('open'); overlay.classList.add('open'); }
+function shutDrawer(){ drawer.classList.remove('open'); overlay.classList.remove('open'); }
+document.getElementById('openCart').onclick = openDrawer;
+document.getElementById('closeDrawer').onclick = shutDrawer;
+overlay.onclick = shutDrawer;
+
+function renderDrawer(){
+  const body = document.getElementById('drawerBody');
+  const entries = Object.entries(cart);
+  if(entries.length===0){
+    body.innerHTML = '<div class="empty-cart">Aún no has agregado productos.</div>';
+    return;
+  }
+  body.innerHTML = '';
+  entries.forEach(([sku,qty])=>{
+    const p = allProducts().find(x=>x.sku===sku);
+    if(!p) return;
+    const row = document.createElement('div');
+    row.className = 'cart-row';
+    row.innerHTML = `
+      <div class="cname">
+        <div class="n body-text">${p.name}</div>
+        <div class="p">${fmt(p.price)} / ${p.um}</div>
+      </div>
+      <div class="stepper">
+        <button data-act="minus">−</button>
+        <span class="q">${qty}</span>
+        <button data-act="plus">+</button>
+      </div>
+      <div class="line-total">${fmt(p.price*qty)}</div>
+    `;
+    row.querySelector('[data-act="minus"]').onclick = ()=> setQty(sku, qty-1);
+    row.querySelector('[data-act="plus"]').onclick = ()=> setQty(sku, qty+1);
+    body.appendChild(row);
+  });
+  const totalRow = document.createElement('div');
+  totalRow.className = 'cart-row';
+  totalRow.style.border = 'none';
+  totalRow.innerHTML = `<div class="cname"><div class="n body-text" style="font-size:16px;">Total</div></div><div class="line-total num" style="font-size:17px;">${fmt(cartTotal())}</div>`;
+  body.appendChild(totalRow);
+}
+
+// ---------- Gestión de productos (agregar/editar/eliminar) ----------
+const catDrawer = document.getElementById('catDrawer');
+const catOverlay = document.getElementById('catOverlay');
+document.getElementById('openCatalog').onclick = ()=>{
+  populateCatOptions();
+  renderCustomList();
+  catDrawer.classList.add('open'); catOverlay.classList.add('open');
+};
+document.getElementById('closeCatDrawer').onclick = shutCatalog;
+catOverlay.onclick = shutCatalog;
+function shutCatalog(){ catDrawer.classList.remove('open'); catOverlay.classList.remove('open'); resetForm(); }
+
+function populateCatOptions(){
+  const dl = document.getElementById('catOptions');
+  dl.innerHTML = '';
+  currentCats().filter(c=>c!=='Todos').forEach(c=>{
+    const o = document.createElement('option'); o.value = c; dl.appendChild(o);
+  });
+}
+
+function resetForm(){
+  document.getElementById('prodForm').reset();
+  document.getElementById('editingSku').value = '';
+  document.getElementById('cancelEdit').style.display = 'none';
+  document.querySelector('#prodForm button[type="submit"]').textContent = 'Guardar producto';
+}
+
+document.getElementById('cancelEdit').onclick = resetForm;
+
+document.getElementById('prodForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const editingSku = document.getElementById('editingSku').value;
+  const sku = document.getElementById('fSku').value.trim();
+  const name = document.getElementById('fName').value.trim();
+  const um = document.getElementById('fUm').value;
+  const price = parseInt(document.getElementById('fPrice').value, 10);
+  const cat = document.getElementById('fCat').value.trim() || 'Otros';
+  if(!sku || !name || isNaN(price)){ showToast('Completa nombre, SKU y precio'); return; }
+
+  const existingBase = BASE_PRODUCTS.find(p=>p.sku===sku);
+  if(existingBase && sku!==editingSku){ showToast('Ese SKU ya existe en el catálogo base'); return; }
+  const dupCustom = customProducts.find(p=>p.sku===sku && sku!==editingSku);
+  if(dupCustom){ showToast('Ese SKU ya existe'); return; }
+
+  const product = {sku,name,um,price,cat};
+
+  if(editingSku && editingSku!==sku){
+    await deleteCustomProduct(editingSku);
+  }
+  await saveCustomProduct(product);
+  resetForm();
+  populateCatOptions();
+  renderCustomList();
+  renderCatScroll();
+  renderGrid();
+  showToast(editingSku ? 'Producto actualizado' : 'Producto agregado');
+});
+
+function editCustomProduct(sku){
+  const p = customProducts.find(x=>x.sku===sku);
+  if(!p) return;
+  document.getElementById('editingSku').value = p.sku;
+  document.getElementById('fSku').value = p.sku;
+  document.getElementById('fName').value = p.name;
+  document.getElementById('fUm').value = p.um;
+  document.getElementById('fPrice').value = p.price;
+  document.getElementById('fCat').value = p.cat;
+  document.getElementById('cancelEdit').style.display = 'inline-block';
+  document.querySelector('#prodForm button[type="submit"]').textContent = 'Actualizar producto';
+  document.querySelector('.drawer-body').scrollTo({top:0, behavior:'smooth'});
+}
+
+function renderCustomList(){
+  const box = document.getElementById('customList');
+  if(customProducts.length===0){
+    box.innerHTML = '<div class="empty-cart">Aún no has agregado productos propios.</div>';
+    return;
+  }
+  box.innerHTML = '<div class="body-text" style="font-size:12px;color:var(--muted);margin:12px 0 4px;">Tus productos agregados</div>';
+  customProducts.forEach(p=>{
+    const row = document.createElement('div');
+    row.className = 'cart-row';
+    row.innerHTML = `
+      <div class="cname">
+        <div class="n body-text">${p.name}</div>
+        <div class="p">${p.sku} · ${fmt(p.price)} / ${p.um} · ${p.cat}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button data-act="edit" class="body-text" style="background:var(--card);border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--ink);">Editar</button>
+        <button data-act="del" class="body-text" style="background:var(--coral);border:none;border-radius:7px;padding:7px 10px;font-size:12px;color:#fff;">Eliminar</button>
+      </div>
+    `;
+    row.querySelector('[data-act="edit"]').onclick = ()=> editCustomProduct(p.sku);
+    row.querySelector('[data-act="del"]').onclick = async ()=>{
+      await deleteCustomProduct(p.sku);
+      renderCustomList(); populateCatOptions(); renderCatScroll(); renderGrid();
+      showToast('Producto eliminado');
+    };
+    box.appendChild(row);
+  });
+}
+
+async function saveCustomProduct(product){
+  const idx = customProducts.findIndex(p=>p.sku===product.sku);
+  if(idx>=0) customProducts[idx]=product; else customProducts.push(product);
+  saveCustomLocal();
+  await apiCall({action:'saveProducto', producto:product});
+}
+async function deleteCustomProduct(sku){
+  customProducts = customProducts.filter(p=>p.sku!==sku);
+  saveCustomLocal();
+  await apiCall({action:'deleteProducto', sku});
+}
+function saveCustomLocal(){
+  try{ localStorage.setItem('cleopatra_productos_custom', JSON.stringify(customProducts)); }catch(e){}
+}
+function loadCustomLocal(){
+  try{ customProducts = JSON.parse(localStorage.getItem('cleopatra_productos_custom') || '[]'); }catch(e){ customProducts = []; }
+  renderCatScroll(); renderGrid();
+}
+
+// ---------- Cerrar venta ----------
+document.getElementById('closeSale').onclick = async ()=>{
+  if(cartCount()===0) return;
+  const total = cartTotal();
+  const items = Object.entries(cart).map(([sku,qty])=>{
+    const p = allProducts().find(x=>x.sku===sku);
+    return {sku,name:p.name,qty,price:p.price,subtotal:p.price*qty};
+  });
+  await saveSale(items, total);
+  showToast('Venta guardada: ' + fmt(total));
+  cart = {};
+  renderGrid(); renderBar(); shutDrawer();
+};
+
+// ---------- Sincronización con Google Sheets ----------
+// Pega aquí la URL de tu Google Apps Script publicado como app web
+// (termina en /exec). Ver instrucciones de instalación.
+const SHEET_URL_KEY = 'cleopatra_sheet_url';
+let SCRIPT_URL = localStorage.getItem(SHEET_URL_KEY) || '';
+let salesCache = []; // más reciente primero
+const localKey = 'cleopatra_ventas'; // respaldo local si no hay conexión
+
+async function initCloud(){
+  const statusEl = document.getElementById('syncStatus');
+  if(!SCRIPT_URL){
+    statusEl.textContent = 'Toca "Configurar" para conectar tu Google Sheet';
+    loadLocalSales();
+    loadCustomLocal();
+    return;
+  }
+  statusEl.textContent = 'Conectando con Google Sheets…';
+  try{
+    const [prods, ventas] = await Promise.all([
+      apiGet('productos'),
+      apiGet('ventas')
+    ]);
+    customProducts = prods || [];
+    salesCache = ventas || [];
+    statusEl.textContent = 'Toca un producto para agregarlo · sincronizado con Google Sheets';
+    renderCatScroll(); renderGrid(); renderHistory(); renderCustomList();
+  }catch(e){
+    statusEl.textContent = 'No se pudo conectar a Google Sheets · usando datos locales';
+    loadLocalSales();
+    loadCustomLocal();
+  }
+}
+
+async function apiGet(action){
+  if(!SCRIPT_URL) return null;
+  const res = await fetch(SCRIPT_URL + '?action=' + action);
+  if(!res.ok) throw new Error('error de red');
+  return res.json();
+}
+async function apiCall(payload){
+  if(!SCRIPT_URL) return;
+  try{
+    // text/plain evita el preflight CORS con Apps Script
+    await fetch(SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(payload)
+    });
+  }catch(e){ /* se queda solo en el respaldo local */ }
+}
+
+function loadLocalSales(){
+  try{
+    salesCache = JSON.parse(localStorage.getItem(localKey) || '[]').slice().reverse();
+  }catch(e){ salesCache = []; }
+  renderHistory();
+}
+
+async function saveSale(items, total){
+  const sale = {ts:new Date().toISOString(), items, total};
+  try{
+    const prev = JSON.parse(localStorage.getItem(localKey) || '[]');
+    prev.push(sale);
+    localStorage.setItem(localKey, JSON.stringify(prev));
+  }catch(e){}
+  salesCache.unshift(sale);
+  renderHistory();
+  await apiCall({action:'addVenta', venta:sale});
+}
+
+// ---------- Configuración (URL de Google Sheets) ----------
+document.getElementById('openConfig').onclick = ()=>{
+  const current = SCRIPT_URL;
+  const val = prompt('Pega la URL de tu Google Apps Script (termina en /exec):', current);
+  if(val === null) return;
+  SCRIPT_URL = val.trim();
+  localStorage.setItem(SHEET_URL_KEY, SCRIPT_URL);
+  showToast(SCRIPT_URL ? 'Conectando…' : 'Desconectado de Google Sheets');
+  initCloud();
+};
+
+// ---------- Historial ----------
+const histDrawer = document.getElementById('histDrawer');
+const histOverlay = document.getElementById('histOverlay');
+document.getElementById('openHistory').onclick = ()=>{
+  renderHistory();
+  histDrawer.classList.add('open'); histOverlay.classList.add('open');
+};
+document.getElementById('closeHistDrawer').onclick = shutHist;
+histOverlay.onclick = shutHist;
+function shutHist(){ histDrawer.classList.remove('open'); histOverlay.classList.remove('open'); }
+
+function renderHistory(){
+  const body = document.getElementById('histBody');
+  if(!salesCache.length){
+    body.innerHTML = '<div class="empty-cart">Aún no hay ventas registradas.</div>';
+    return;
+  }
+  const dayTotal = salesCache.reduce((s,v)=>s+(v.total||0),0);
+  let html = `<div class="receipt" style="margin-bottom:10px;"><div><span>Ventas registradas</span><span class="num">${salesCache.length}</span></div><div><span>Total acumulado</span><span class="num">${fmt(dayTotal)}</span></div></div>`;
+  salesCache.forEach(v=>{
+    const d = new Date(v.ts);
+    const fecha = isNaN(d) ? '' : d.toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const itemsTxt = (v.items||[]).map(it=>`${it.qty}× ${it.name}`).join(', ');
+    html += `<div class="cart-row" style="align-items:flex-start;">
+      <div class="cname">
+        <div class="n body-text">${fecha}</div>
+        <div class="p">${itemsTxt}</div>
+      </div>
+      <div class="line-total num">${fmt(v.total||0)}</div>
+    </div>`;
+  });
+  body.innerHTML = html;
+}
+
+document.getElementById('downloadCsv').onclick = ()=>{
+  if(!salesCache.length){ showToast('No hay ventas para exportar'); return; }
+  const rows = [['fecha_hora','sku','producto','cantidad','precio_unitario','subtotal','total_venta']];
+  salesCache.slice().reverse().forEach(v=>{
+    (v.items||[]).forEach(it=>{
+      rows.push([v.ts, it.sku, it.name, it.qty, it.price, it.subtotal, v.total]);
+    });
+  });
+  const csv = rows.map(r => r.map(cell=>{
+    const s = String(cell ?? '');
+    return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(',')).join('\n');
+
+  // Descarga estándar del navegador (sin depender de Claude)
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'cleopatra_historial_ventas.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Historial descargado');
+};
+
+// ---------- Toast ----------
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 1300);
+}
+
+// ---------- Reloj ----------
+function tickClock(){
+  const d = new Date();
+  document.getElementById('clock').textContent = d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+}
+tickClock(); setInterval(tickClock, 15000);
+
+// ---------- Init ----------
+renderCatScroll();
+renderGrid();
+renderBar();
+initCloud();
+</script>
+</body>
+</html>
