@@ -733,7 +733,7 @@ async function initCloud(){
 
 async function apiGet(action){
   if(!SCRIPT_URL) return null;
-  const res = await fetch(SCRIPT_URL + '?action=' + action);
+  const res = await fetch(SCRIPT_URL + '?action=' + action, { redirect: 'follow' });
   if(!res.ok) throw new Error('error de red');
   return res.json();
 }
